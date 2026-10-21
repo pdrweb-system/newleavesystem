@@ -1,16 +1,9 @@
 import { formatThaiDate, roundPeriod, roundPeriodNoYear } from './thai-date.js';
+import { el } from './dom.js';
 
 const fmt0 = (n) => Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
 const fmt2 = (n) => Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function el(tag, props = {}, ...children) {
-  const e = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k === 'class') e.className = v; else e.setAttribute(k, v);
-  }
-  for (const c of children) e.append(c);   // string -> text node ไม่ผ่าน innerHTML
-  return e;
-}
 const box = (on) => el('span', { class: 'box' }, on ? '✓' : '');
 const dot = (text) => el('span', { class: 'dot' }, text ?? '');
 

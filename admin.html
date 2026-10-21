@@ -12,17 +12,120 @@
   <button id="logoutBtn" type="button">ออกจากระบบ</button>
 </header>
 <main hidden>
-  <p class="secret-note">เอกสารลับ — ห้ามเผยแพร่ต่อ</p>
-  <div class="card"><p class="muted">หน้าจัดการรอบ ครู/บัญชี และตั้งค่าโรงเรียน (เฟส 3)</p></div>
+  <p class="secret-note">เอกสารลับ — ข้อมูลเงินเดือนรายบุคคล ห้ามเผยแพร่ต่อ</p>
+  <nav class="tabs" role="tablist">
+    <button type="button" role="tab" data-tab="rounds">รอบ</button>
+    <button type="button" role="tab" data-tab="teachers">ครู / บัญชี</button>
+    <button type="button" role="tab" data-tab="settings">ตั้งค่าโรงเรียน</button>
+    <button type="button" role="tab" data-tab="audit">บันทึกการใช้งาน</button>
+  </nav>
+
+  <!-- ===== รอบ ===== -->
+  <section data-panel="rounds" hidden>
+    <div class="card">
+      <h2>รอบการประเมิน</h2>
+      <div class="table-wrap">
+        <table class="list nowrap">
+          <thead><tr><th>ปีที่เริ่ม</th><th>รอบ</th><th>ช่วงเวลา</th><th>สถานะ</th><th>วันที่ลงนาม</th><th></th></tr></thead>
+          <tbody id="roundRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+
+    <div id="roundEditor"></div>
+    <div id="roundMsg" class="msg" role="status" hidden></div>
+
+    <form id="roundCreateForm" class="card" novalidate>
+      <h2>สร้างรอบใหม่</h2>
+      <div class="form-grid">
+        <div><label for="rc_year">ปี พ.ศ. ที่เริ่มรอบ</label><input id="rc_year" name="start_year" type="number" min="2500" max="2700" required></div>
+        <div><label for="rc_no">รอบ</label>
+          <select id="rc_no" name="round_no"><option value="1">รอบที่ 1 (1 ต.ค. – 31 มี.ค.)</option><option value="2">รอบที่ 2 (1 เม.ย. – 30 ก.ย.)</option></select></div>
+        <div><label for="rc_order_no">เลขที่คำสั่ง</label><input id="rc_order_no" name="order_no" placeholder="เช่น 200/2569"></div>
+        <div><label for="rc_order_date">วันที่สั่ง</label><input id="rc_order_date" name="order_date" type="date"></div>
+        <div><label for="rc_notice_date">วันที่ลงนามในใบแจ้ง</label><input id="rc_notice_date" name="notice_date" type="date"></div>
+      </div>
+      <div class="button-row"><button class="primary" type="submit">สร้างรอบ</button></div>
+      <div id="roundCreateMsg" class="msg" hidden></div>
+    </form>
+  </section>
+
+  <!-- ===== ครู / บัญชี ===== -->
+  <section data-panel="teachers" hidden>
+    <form id="teacherForm" class="card" novalidate>
+      <h2 id="teacherFormTitle">เพิ่มครู</h2>
+      <div class="form-grid">
+        <div><label for="t_code">รหัสประจำตัว (ใช้เป็นชื่อล็อกอิน)</label><input id="t_code" name="employee_code" autocapitalize="none" spellcheck="false" required></div>
+        <div><label for="t_prefix">คำนำหน้า</label><input id="t_prefix" name="prefix" list="prefixList" required></div>
+        <div><label for="t_first">ชื่อ</label><input id="t_first" name="first_name" required></div>
+        <div><label for="t_last">นามสกุล</label><input id="t_last" name="last_name" required></div>
+        <div><label for="t_pos">ตำแหน่ง</label><input id="t_pos" name="position" value="ครู"></div>
+        <div><label for="t_rank">วิทยฐานะ</label><input id="t_rank" name="academic_rank" list="rankList" placeholder="เว้นว่างได้"></div>
+      </div>
+      <datalist id="prefixList"><option value="นาย"><option value="นาง"><option value="นางสาว"></datalist>
+      <datalist id="rankList"><option value="ครูชำนาญการ"><option value="ครูชำนาญการพิเศษ"><option value="ครูเชี่ยวชาญ"><option value="ครูเชี่ยวชาญพิเศษ"></datalist>
+      <div class="button-row">
+        <button class="primary" type="submit">บันทึก</button>
+        <button id="teacherCancel" type="button" hidden>ยกเลิกการแก้ไข</button>
+      </div>
+    </form>
+    <div id="teacherMsg" class="msg" role="status" hidden></div>
+    <div class="card">
+      <h2>รายชื่อครู</h2>
+      <div class="table-wrap">
+        <table class="list">
+          <thead><tr><th>รหัส</th><th>ชื่อ</th><th>ตำแหน่ง</th><th>สถานะ</th><th>บัญชี</th><th></th></tr></thead>
+          <tbody id="teacherRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ตั้งค่าโรงเรียน ===== -->
+  <section data-panel="settings" hidden>
+    <form id="settingsForm" class="card" novalidate>
+      <h2>ข้อมูลโรงเรียน</h2>
+      <div class="form-grid">
+        <div><label for="s_school">ชื่อโรงเรียน</label><input id="s_school" name="school_name" required></div>
+        <div><label for="s_aff">สังกัด</label><input id="s_aff" name="affiliation" required></div>
+        <div><label for="s_issuer">ผู้ออกคำสั่ง (ใช้ในหมายเหตุ)</label><input id="s_issuer" name="order_issuer" placeholder="เช่น สพป.xxxx" required></div>
+        <div><label for="s_dprefix">คำนำหน้า ผอ.</label><input id="s_dprefix" name="director_prefix" list="prefixList" required></div>
+        <div><label for="s_dname">ชื่อ-นามสกุล ผอ.</label><input id="s_dname" name="director_name" required></div>
+        <div><label for="s_dtitle">ตำแหน่ง ผอ. (บรรทัดใต้ชื่อ)</label><input id="s_dtitle" name="director_title" required></div>
+      </div>
+      <div class="button-row"><button class="primary" type="submit">บันทึกข้อมูลโรงเรียน</button></div>
+      <div id="settingsMsg" class="msg" hidden></div>
+    </form>
+
+    <div class="card">
+      <h2>ลายเซ็นผู้อำนวยการ</h2>
+      <p class="muted">ไฟล์ PNG พื้นหลังโปร่งใส ไม่เกิน 500 KB ระบบใส่ลงในใบเมื่อ ผอ. อนุมัติเท่านั้น
+        (ใบที่อนุมัติไปแล้วใช้ลายเซ็นเดิมเสมอ)</p>
+      <div id="sigCurrent"></div>
+      <label for="sigFile">เลือกไฟล์ลายเซ็นใหม่</label>
+      <input id="sigFile" type="file" accept="image/png">
+      <div id="sigPreview"></div>
+      <div class="button-row"><button id="sigSave" class="primary" type="button" disabled>อัปโหลดลายเซ็น</button></div>
+      <div id="sigMsg" class="msg" hidden></div>
+    </div>
+  </section>
+
+  <!-- ===== บันทึกการใช้งาน ===== -->
+  <section data-panel="audit" hidden>
+    <div class="card">
+      <h2>บันทึกการใช้งานล่าสุด (200 รายการ)</h2>
+      <div class="table-wrap">
+        <table class="list">
+          <thead><tr><th>เวลา</th><th>ผู้ใช้</th><th>การกระทำ</th><th>รายละเอียด</th><th></th></tr></thead>
+          <tbody id="auditRows"></tbody>
+        </table>
+      </div>
+      <div id="auditMsg" class="msg" hidden></div>
+    </div>
+  </section>
 </main>
 <script src="assets/vendor/supabase-js-2.117.2.js"></script>
-<script type="module">
-import { guard, wireLogout } from './assets/auth-guard.js';
-
-await guard(['admin']);
-document.querySelector('.topbar').hidden = false;
-document.querySelector('main').hidden = false;
-wireLogout();
-</script>
+<script type="module" src="assets/admin.js"></script>
 </body>
 </html>

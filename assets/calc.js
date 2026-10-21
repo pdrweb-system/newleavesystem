@@ -8,5 +8,5 @@ export function suggestIncrement(base, percent) {
 }
 
 export function suggestNewSalary(beforeSalary, increment) {
-  return beforeSalary + increment;
+  return Math.round((beforeSalary + increment) * 100) / 100;
 }
