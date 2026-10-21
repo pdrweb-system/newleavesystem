@@ -7,7 +7,19 @@
 ## ต้องตั้งค่าเองใน Dashboard (ตั้งค่าผ่าน SQL ไม่ได้)
 
 - Authentication → Sign In / Providers → ปิด **Allow new users to sign up**
+- Authentication → Sign In / Providers → Email → ตั้ง **Minimum password length** = 8
+  (และเปิด **Leaked password protection** ถ้าแผนที่ใช้รองรับ)
 - ห้ามนำ `service_role` key ใส่ในหน้าเว็บหรือ commit เข้า repo (ใช้ใน Edge Function เท่านั้น)
+
+## บัญชีและล็อกอิน
+
+- ชื่อล็อกอิน = รหัสประจำตัว (ตัวอักษร A–Z, 0–9, `.` `_` `-`) หน้าเว็บต่อเป็น `{รหัส}@school.invalid`
+- บัญชีแอดมิน/ผอ. สร้างครั้งเดียวด้วย `seed/create_staff_account.sql` (ใส่รหัสชั่วคราว ห้าม commit)
+- บัญชีครูสร้าง/รีเซ็ตผ่าน Edge Function `admin-create-user`, `admin-reset-password`
+  (ผู้เรียกต้องเป็นแอดมิน; รีเซ็ตได้เฉพาะบัญชีครู บัญชี ผอ./แอดมินรีเซ็ตใน Dashboard)
+- ทุกบัญชีใหม่/ที่ถูกรีเซ็ตต้องเปลี่ยนรหัสตอนล็อกอินครั้งแรก: trigger บน `auth.users`
+  ปลดธง `must_change_password` เมื่อรหัสผ่านเปลี่ยน
+- หน้าเว็บเก็บ session ใน sessionStorage และออกจากระบบเองเมื่อไม่ใช้งาน 30 นาที
 
 ## หมายเหตุการออกแบบ
 

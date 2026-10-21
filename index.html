@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เข้าสู่ระบบ — แจ้งผลการเลื่อนเงินเดือน</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<main>
+  <form id="loginForm" class="card narrow" novalidate>
+    <h1 style="margin-top:0;font-size:22px">แจ้งผลการเลื่อนเงินเดือน</h1>
+    <p class="secret-note">เอกสารลับ — ใช้เฉพาะบุคลากรของโรงเรียน</p>
+    <label for="login">รหัสประจำตัว</label>
+    <input id="login" name="login" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label for="password">รหัสผ่าน</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button id="submitBtn" class="primary" type="submit">เข้าสู่ระบบ</button>
+    <div id="msg" class="msg error" role="alert" hidden></div>
+    <p class="muted">ลืมรหัสผ่าน ติดต่อแอดมินของโรงเรียนเพื่อรีเซ็ต</p>
+  </form>
+</main>
+<script src="assets/vendor/supabase-js-2.117.2.js"></script>
+<script type="module">
+import { sb } from './assets/supabase-client.js';
+import { getProfile, homeFor, loginToEmail } from './assets/auth-guard.js';
+
+const form = document.getElementById('loginForm');
+const msg = document.getElementById('msg');
+const btn = document.getElementById('submitBtn');
+const showError = (text) => { msg.textContent = text; msg.hidden = false; };
+
+async function goHome() {
+  const profile = await getProfile();
+  if (!profile) {
+    await sb.auth.signOut();
+    showError('บัญชีนี้ยังไม่ได้ตั้งค่าในระบบ กรุณาติดต่อแอดมิน');
+    return;
+  }
+  location.replace(profile.must_change_password ? 'change-password.html' : homeFor(profile.role));
+}
+
+// ล็อกอินค้างอยู่แล้วก็ไปหน้าของบทบาทเลย
+getProfile().then((p) => { if (p) goHome(); }).catch(() => {});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  msg.hidden = true;
+  const login = form.login.value.trim();
+  const password = form.password.value;
+  if (!login || !password) return showError('กรุณากรอกรหัสประจำตัวและรหัสผ่าน');
+
+  btn.disabled = true;
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email: loginToEmail(login), password });
+    if (error) {
+      showError(error.code === 'invalid_credentials' || error.status === 400
+        ? 'รหัสประจำตัวหรือรหัสผ่านไม่ถูกต้อง'
+        : !error.status
+          ? 'เชื่อมต่อระบบไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่'
+          : 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+      return;
+    }
+    await goHome();
+  } catch {
+    showError('เชื่อมต่อระบบไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

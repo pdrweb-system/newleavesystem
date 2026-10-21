@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ผู้อำนวยการ — แจ้งผลการเลื่อนเงินเดือน</title>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<header class="topbar" hidden>
+  <h1>แจ้งผลการเลื่อนเงินเดือน · ผู้อำนวยการ</h1>
+  <button id="logoutBtn" type="button">ออกจากระบบ</button>
+</header>
+<main hidden>
+  <p class="secret-note">เอกสารลับ — ห้ามเผยแพร่ต่อ</p>
+  <div class="card"><p class="muted">รายการรอบที่รออนุมัติจะแสดงที่นี่ (เฟส 5)</p></div>
+</main>
+<script src="assets/vendor/supabase-js-2.117.2.js"></script>
+<script type="module">
+import { guard, wireLogout } from './assets/auth-guard.js';
+
+await guard(['director']);
+document.querySelector('.topbar').hidden = false;
+document.querySelector('main').hidden = false;
+wireLogout();
+</script>
+</body>
+</html>
