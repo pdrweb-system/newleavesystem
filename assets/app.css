@@ -57,3 +57,10 @@ table.grid input:disabled, table.grid select:disabled { background: var(--bg); c
 .badge.published { background: var(--ok-bg); border-color: #8fcca4; }
 .sig-preview { max-height: 90px; max-width: 100%; border: 1px dashed var(--border); padding: 4px; background: #fff; }
 details pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; background: var(--bg); padding: 8px; border-radius: 6px; }
+.notice-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.notice-item:last-child { border-bottom: none; }
+.notice-item .button-row { margin-top: 8px; }
+ul.facts { margin: 0 0 12px; padding-left: 20px; }
+.issuer { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.issuer ul { margin: 4px 0 12px; padding-left: 20px; }
+textarea { resize: vertical; }

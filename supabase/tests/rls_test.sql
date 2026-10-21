@@ -1,5 +1,6 @@
 -- ชุดทดสอบ RLS/สิทธิ์ ด้วยข้อมูลสมมติ (ไม่มีข้อมูลจริง)
 -- รันทั้งสคริปต์ด้วยสิทธิ์ postgres (SQL editor หรือ execute_sql)
+-- รันบนฐานข้อมูลที่มีข้อมูลจริงได้: ใช้รหัส/ปีทดสอบที่ไม่ชนของจริง นับเฉพาะข้อมูลทดสอบ และ rollback ทุกอย่าง
 -- ทำทุกอย่างในบล็อกเดียวแล้ว raise exception ท้ายบล็อก เพื่อ rollback ข้อมูลทดสอบทั้งหมด
 -- และส่งรายงานผลออกมาทางข้อความ error (PASS/FAIL ต่อหนึ่งข้อทดสอบ)
 
@@ -76,25 +77,30 @@ begin
 
   -- ===== เตรียมข้อมูล (สิทธิ์เจ้าของ) =====
   insert into auth.users (id, email) values
-    (u_admin, 'admin@test.invalid'), (u_dir, 'director@test.invalid'),
-    (u_ta, 'ta@test.invalid'), (u_tb, 'tb@test.invalid'), (u_none, 'none@test.invalid');
+    (u_admin, 'rls-admin@test.invalid'), (u_dir, 'rls-director@test.invalid'),
+    (u_ta, 'rls-ta@test.invalid'), (u_tb, 'rls-tb@test.invalid'), (u_none, 'rls-none@test.invalid');
+  -- ครูจริง (ถ้ามี) ปิดใช้งานชั่วคราวในทรานแซกชันนี้ เพื่อให้ submit_round นับเฉพาะครูทดสอบ
+  update public.teachers set active = false where active;
   insert into public.teachers (employee_code, prefix, first_name, last_name, position, academic_rank)
-    values ('T001', 'นาย', 'สมชาย', 'ใจดี', 'ครู', 'ครูชำนาญการ') returning id into t_a;
+    values ('TEST-A', 'นาย', 'สมชาย', 'ใจดี', 'ครู', 'ครูชำนาญการ') returning id into t_a;
   insert into public.teachers (employee_code, prefix, first_name, last_name, position)
-    values ('T002', 'นางสาว', 'สมหญิง', 'รักเรียน', 'ครู') returning id into t_b;
+    values ('TEST-B', 'นางสาว', 'สมหญิง', 'รักเรียน', 'ครู') returning id into t_b;
   insert into public.teachers (employee_code, prefix, first_name, last_name, position, academic_rank)
-    values ('T003', 'นาง', 'สมศรี', 'มั่นคง', 'ครู', 'ครูชำนาญการพิเศษ') returning id into t_c;
+    values ('TEST-C', 'นาง', 'สมศรี', 'มั่นคง', 'ครู', 'ครูชำนาญการพิเศษ') returning id into t_c;
   insert into public.profiles (id, role, teacher_id) values
     (u_admin, 'admin', null), (u_dir, 'director', null), (u_ta, 'teacher', t_a), (u_tb, 'teacher', t_b);
 
   -- ===== 1. แอดมินเตรียมรอบและใบ =====
   perform _t.as_user(u_admin);
   perform _t.expect_ok('1.1 แอดมินสร้างการตั้งค่าโรงเรียนได้', $q$
-    insert into public.school_settings (school_name, affiliation, order_issuer, director_name)
-    values ('โรงเรียนทดสอบ', 'สพป.ทดสอบ', 'สพป.ทดสอบ', 'ผอ ทดสอบ') $q$);
-  insert into public.rounds (start_year, round_no) values (2569, 1) returning id into r1;
+    insert into public.school_settings (school_name, affiliation, order_issuer, director_prefix, director_name, director_title, signature_path)
+    values ('โรงเรียนทดสอบ', 'สพป.ทดสอบ', 'สพป.ทดสอบ', 'นาย', 'ผอ ทดสอบ', 'ผู้อำนวยการโรงเรียนทดสอบ', null)
+    on conflict (id) do update set school_name = excluded.school_name, affiliation = excluded.affiliation,
+      order_issuer = excluded.order_issuer, director_prefix = excluded.director_prefix,
+      director_name = excluded.director_name, director_title = excluded.director_title, signature_path = null $q$);
+  insert into public.rounds (start_year, round_no) values (2699, 1) returning id into r1;
   perform _t.expect_err('1.2 แอดมินสร้างรอบสถานะ published ตรง ๆ ไม่ได้', '42501',
-    $q$ insert into public.rounds (start_year, round_no, status) values (2569, 2, 'published') $q$);
+    $q$ insert into public.rounds (start_year, round_no, status) values (2699, 2, 'published') $q$);
   perform _t.expect_err('1.3 แอดมินแก้ status ของรอบตรง ๆ ไม่ได้', '42501',
     format($q$ update public.rounds set status = 'published' where id = %L $q$, r1));
   perform _t.expect_err('1.4 แอดมินแก้ snapshot ของรอบตรง ๆ ไม่ได้', '42501',
@@ -124,8 +130,8 @@ begin
   -- ===== 2. ครู A ขณะรอบยังเป็น draft =====
   reset role;
   perform _t.as_user(u_ta);
-  perform _t.expect_count('2.1 ครูไม่เห็นรอบที่เป็น draft', 0, 'select 1 from public.rounds');
-  perform _t.expect_count('2.2 ครูไม่เห็นใบในรอบ draft', 0, 'select 1 from public.salary_notices');
+  perform _t.expect_count('2.1 ครูไม่เห็นรอบที่เป็น draft', 0, format('select 1 from public.rounds where id = %L', r1));
+  perform _t.expect_count('2.2 ครูไม่เห็นใบในรอบ draft', 0, format('select 1 from public.salary_notices where round_id = %L', r1));
   perform _t.expect_err('2.3 ครูเรียก submit_round ไม่ได้', '42501',
     format($q$ select public.submit_round(%L) $q$, r1));
   perform _t.expect_err('2.4 ครูเรียก approve_round ไม่ได้', '42501',
@@ -146,7 +152,7 @@ begin
   perform _t.expect_err('2.14 ครูเขียน audit_log ไม่ได้', '42501',
     $q$ insert into public.audit_log (action) values ('x') $q$);
   perform _t.expect_err('2.15 ครูสร้างรอบไม่ได้', '42501',
-    $q$ insert into public.rounds (start_year, round_no) values (2570, 1) $q$);
+    $q$ insert into public.rounds (start_year, round_no) values (2698, 1) $q$);
   perform _t.expect_err('2.16 ครู log_download รอบ draft ไม่ได้', 'P0001',
     format($q$ select public.log_download(%L) $q$, r1), '%ไม่พบเอกสาร%');
 
@@ -173,13 +179,16 @@ begin
   -- ===== 4. ผอ. ก่อนมีลายเซ็น =====
   reset role;
   perform _t.as_user(u_dir);
-  perform _t.expect_count('4.1 ผอ. เห็นรอบ', 1, 'select 1 from public.rounds');
-  perform _t.expect_count('4.2 ผอ. เห็นใบทุกคน', 3, 'select 1 from public.salary_notices');
-  perform _t.expect_count('4.3 ผอ. เห็นข้อมูลครูทุกคน', 3, 'select 1 from public.teachers');
+  perform _t.expect_count('4.1 ผอ. เห็นรอบ', 1, format('select 1 from public.rounds where id = %L', r1));
+  perform _t.expect_count('4.2 ผอ. เห็นใบทุกคน', 3, format('select 1 from public.salary_notices where round_id = %L', r1));
+  perform _t.expect_count('4.3 ผอ. เห็นข้อมูลครูทุกคน', 3, format('select 1 from public.teachers where id in (%L, %L, %L)', t_a, t_b, t_c));
   perform _t.expect_rows('4.4 ผอ. แก้ตั้งค่าโรงเรียนไม่ได้', 0,
     $q$ update public.school_settings set school_name = 'x' $q$);
   perform _t.expect_err('4.5 อนุมัติไม่ได้ถ้ายังไม่มีลายเซ็น', 'P0001',
     format($q$ select public.approve_round(%L) $q$, r1), '%ลายเซ็น%');
+  perform _t.expect_count('4.6 ผอ. เห็น profiles ทุกคน (แสดงชื่อใน audit)', 4,
+    format('select 1 from public.profiles where id in (%L, %L, %L, %L)', u_admin, u_dir, u_ta, u_tb));
+  perform _t.expect_err('4.7 ผอ. แก้ profiles ไม่ได้', '42501', $q$ update public.profiles set role = 'admin' $q$);
 
   -- ===== 5. ลายเซ็น (ไฟล์ใน storage) =====
   reset role;
@@ -223,7 +232,7 @@ begin
   -- ===== 8. ครู A หลังเผยแพร่ =====
   reset role;
   perform _t.as_user(u_ta);
-  perform _t.expect_count('8.1 ครูเห็นรอบที่เผยแพร่แล้ว', 1, 'select 1 from public.rounds');
+  perform _t.expect_count('8.1 ครูเห็นรอบที่เผยแพร่แล้ว', 1, format('select 1 from public.rounds where id = %L', r1));
   perform _t.expect_count('8.2 ครูเห็นใบของตัวเอง 1 ใบ', 1, 'select 1 from public.salary_notices');
   perform _t.expect_count('8.3 ครูอ่านใบของครูคนอื่นไม่ได้', 0,
     format($q$ select 1 from public.salary_notices where teacher_id <> %L $q$, t_a));
@@ -237,7 +246,7 @@ begin
   perform _t.expect_count('8.8 ครูอ่านไฟล์ลายเซ็นที่รอบเผยแพร่อ้างถึงได้', 1,
     $q$ select 1 from storage.objects where bucket_id = 'signatures' and name = 'test-sig.png' $q$);
   perform _t.expect_count('8.9 ครูอ่านไฟล์ลายเซ็นอื่นไม่ได้', 0,
-    $q$ select 1 from storage.objects where bucket_id = 'signatures' and name <> 'test-sig.png' $q$);
+    $q$ select 1 from storage.objects where bucket_id = 'signatures' and name in ('other-sig.png', 'admin-upload.png') $q$);
   perform _t.expect_err('8.10 ครูอัปโหลดไฟล์เข้า bucket signatures ไม่ได้', '42501',
     $q$ insert into storage.objects (bucket_id, name) values ('signatures', 'evil.png') $q$);
 
@@ -252,17 +261,17 @@ begin
   reset role;
   perform _t.as_user(u_admin);
   perform _t.expect_count('10.1 แอดมินเห็นบันทึกการดาวน์โหลดของครู', 1,
-    $q$ select 1 from public.audit_log where action = 'download' $q$);
+    format($q$ select 1 from public.audit_log where action = 'download' and row_id = %L $q$, r1));
   perform _t.expect_count('10.2 audit_log มีบันทึกการเปลี่ยนรอบเป็น published', 1,
-    $q$ select 1 from public.audit_log where table_name = 'rounds' and action = 'update'
-        and detail -> 'new' ->> 'status' = 'published' $q$);
+    format($q$ select 1 from public.audit_log where table_name = 'rounds' and action = 'update' and row_id = %L
+        and detail -> 'new' ->> 'status' = 'published' $q$, r1));
   perform _t.expect_err('10.3 แอดมินแก้ audit_log ไม่ได้', '42501',
     $q$ update public.audit_log set action = 'x' $q$);
   perform _t.expect_err('10.4 แอดมินลบ audit_log ไม่ได้', '42501', $q$ delete from public.audit_log $q$);
   reset role;
   perform _t.as_user(u_dir);
   perform _t.expect_count('10.5 ผอ. เห็น audit_log', 1,
-    $q$ select 1 from public.audit_log where action = 'download' $q$);
+    format($q$ select 1 from public.audit_log where action = 'download' and row_id = %L $q$, r1));
   reset role;
   perform _t.expect_err('10.6 แม้เจ้าของฐานข้อมูลก็แก้ audit_log ไม่ได้ (trigger)', 'P0001',
     $q$ update public.audit_log set action = 'x' $q$);
@@ -270,7 +279,7 @@ begin
   -- ===== 11. ครูที่ถูกปิดใช้งาน =====
   update public.teachers set active = false where id = t_a;
   perform _t.as_user(u_ta);
-  perform _t.expect_count('11.1 ครูที่ถูกปิดใช้งานไม่เห็นรอบ', 0, 'select 1 from public.rounds');
+  perform _t.expect_count('11.1 ครูที่ถูกปิดใช้งานไม่เห็นรอบ', 0, format('select 1 from public.rounds where id = %L', r1));
   perform _t.expect_count('11.2 ครูที่ถูกปิดใช้งานไม่เห็นใบ', 0, 'select 1 from public.salary_notices');
   perform _t.expect_count('11.3 ครูที่ถูกปิดใช้งานไม่เห็นข้อมูลครู', 0, 'select 1 from public.teachers');
   perform _t.expect_err('11.4 ครูที่ถูกปิดใช้งาน log_download ไม่ได้', 'P0001',
@@ -293,10 +302,10 @@ begin
       and approved_by is null and approved_at is null and submitted_at is null
       and snap_signature_path is null and snap_school_name is null $q$, r1));
   perform _t.expect_count('12.5 บันทึกเหตุผลการถอนใน audit_log', 1,
-    $q$ select 1 from public.audit_log where action = 'revert_round' and detail ->> 'reason' = 'ตัวเลขผิด' $q$);
+    format($q$ select 1 from public.audit_log where action = 'revert_round' and row_id = %L and detail ->> 'reason' = 'ตัวเลขผิด' $q$, r1));
   reset role;
   perform _t.as_user(u_tb);
-  perform _t.expect_count('12.6 ครูไม่เห็นรอบที่ถูกถอนกลับ', 0, 'select 1 from public.rounds');
+  perform _t.expect_count('12.6 ครูไม่เห็นรอบที่ถูกถอนกลับ', 0, format('select 1 from public.rounds where id = %L', r1));
   perform _t.expect_count('12.7 ครูไม่เห็นใบของรอบที่ถูกถอนกลับ', 0, 'select 1 from public.salary_notices');
   reset role;
   perform _t.as_user(u_admin);

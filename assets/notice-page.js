@@ -5,6 +5,7 @@ import { suggestIncrement, suggestNewSalary } from './calc.js';
 // notice.html?round=<uuid>                 ครู: ใบของตัวเองในรอบนั้น / แอดมิน, ผอ.: ทุกคน
 // notice.html?round=<uuid>&teacher=<uuid>  แอดมิน, ผอ.: เฉพาะครูคนนั้น
 // notice.html?round=<uuid>&all=1           ทั้งรอบ (ครูจะเห็นแค่ของตัวเองตาม RLS)
+// ...&print=1                             เปิดหน้าต่างพิมพ์ให้เองเมื่อโหลดเสร็จ (ปุ่ม "บันทึกเป็น PDF" ของครู)
 // notice.html?demo=1&round=1|2&promoted=0  ตัวอย่างข้อมูลสมมติ ไม่ต่อฐานข้อมูล (ตรวจเลย์เอาต์)
 const q = new URLSearchParams(location.search);
 const out = document.getElementById('out');
@@ -55,7 +56,7 @@ async function finish(sheets, { requireImages }) {
   const over = sheets.filter(overflows).length;
   if (over) setStatus(`มี ${over} ใบที่เนื้อหายาวเกิน 1 หน้า (เช่น เหตุผลยาวเกินไป) กรุณาแก้ข้อความก่อนพิมพ์`, 'error');
   printBtn.disabled = false;
-  return true;
+  return over === 0;
 }
 
 function demo() {
@@ -146,7 +147,7 @@ async function fromDatabase() {
     window.print();
   });
 
-  await finish(sheets, { requireImages: published });
+  if (await finish(sheets, { requireImages: published }) && q.get('print') === '1') printBtn.click();
 }
 
 if (q.get('demo') === '1') demo();
