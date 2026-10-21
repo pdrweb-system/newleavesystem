@@ -33,7 +33,7 @@ export function renderNotice({ school, round, notice, signatureUrl, draft }) {
     'ชื่อ ', dot(notice.snap_full_name), ' ตำแหน่ง ', dot(notice.snap_position),
     ' โรงเรียน ', dot(school.school_name), el('br'),
     'วิทยฐานะ ', dot(notice.snap_academic_rank), ' สังกัด ', dot(school.affiliation), el('br'),
-    'เงินเดือนก่อนเลื่อน ', dot(p ? fmt0(notice.before_salary) : ''), ' บาท'));
+    'เงินเดือนก่อนเลื่อน ', dot(notice.before_salary != null ? fmt0(notice.before_salary) : ''), ' บาท'));
 
   sheet.append(el('p', {}, box(p), 'ได้รับการเลื่อนเงินเดือน'));
 
