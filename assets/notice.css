@@ -1,0 +1,33 @@
+@font-face { font-family: 'Sarabun'; font-weight: 400; src: url('fonts/sarabun-thai-400-normal.woff2') format('woff2'); unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: 'Sarabun'; font-weight: 400; src: url('fonts/sarabun-latin-400-normal.woff2') format('woff2'); unicode-range: U+0000-00FF, U+2013, U+2014, U+2022; }
+@font-face { font-family: 'Sarabun'; font-weight: 700; src: url('fonts/sarabun-thai-700-normal.woff2') format('woff2'); unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
+@font-face { font-family: 'Sarabun'; font-weight: 700; src: url('fonts/sarabun-latin-700-normal.woff2') format('woff2'); unicode-range: U+0000-00FF, U+2013, U+2014, U+2022; }
+
+@page { size: A4; margin: 18mm; }
+
+body { margin: 0; background: #e8e8e8; font-family: 'Sarabun', 'TH Sarabun New', sans-serif; font-size: 13pt; line-height: 1.55; color: #111; }
+.sheet { position: relative; box-sizing: border-box; width: 210mm; height: 297mm; padding: 18mm; margin: 8mm auto; background: #fff; overflow: hidden; page-break-after: always; break-after: page; }
+.secret { color: #c0392b; text-align: center; font-weight: 700; font-size: 18pt; }
+.secret.foot { position: absolute; left: 18mm; right: 18mm; bottom: 14mm; }
+h1 { text-align: center; font-size: 16pt; margin: 0 0 4mm; }
+p { margin: 0 0 3mm; }
+.dot { border-bottom: 1px dotted #333; padding: 0 3mm; }
+.box { display: inline-block; width: 4.2mm; height: 4.2mm; border: 1px solid #333; margin-right: 2mm; vertical-align: middle; text-align: center; line-height: 4.2mm; font-size: 10pt; }
+.round-row { display: block; margin-left: 28mm; }
+table { border-collapse: collapse; margin: 3mm auto 0; width: 94%; }
+td, th { border: 1px solid #333; text-align: center; padding: 2mm; font-weight: 400; }
+td { height: 20mm; }
+.reason-line { border-bottom: 1px dotted #333; min-height: 7mm; }
+.sig { margin: 6mm 0 0 auto; width: 85mm; text-align: center; }
+.sig-img { height: 16mm; min-height: 16mm; }
+.sig-img img { height: 16mm; }
+.draft-mark { color: #999; font-size: 11pt; }
+.confidential-note { font-size: 10pt; color: #666; }
+
+@media print {
+  body { background: none; }
+  .sheet { margin: 0; box-shadow: none; padding: 0; width: auto; height: 261mm; }
+  .secret.foot { left: 0; right: 0; bottom: 0; }
+  .no-print { display: none !important; }
+}
+@media screen { .sheet { box-shadow: 0 1px 6px rgba(0,0,0,.25); } }

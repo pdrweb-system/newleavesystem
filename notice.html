@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>หนังสือแจ้งผลการเลื่อนเงินเดือน</title>
+<link rel="stylesheet" href="assets/notice.css">
+</head>
+<body>
+<div class="no-print" style="text-align:center;padding:8px">
+  <button id="printBtn">บันทึกเป็น PDF</button>
+  <span class="confidential-note">เอกสารลับ — ห้ามเผยแพร่ต่อ</span>
+</div>
+<div id="out"></div>
+<script type="module">
+import { renderNotice } from './assets/notice-render.js';
+import { suggestIncrement, suggestNewSalary } from './assets/calc.js';
+
+// ต้นแบบ: ใช้ข้อมูลสมมติเท่านั้น (ยังไม่เชื่อม Supabase) — ?demo=1&round=1|2 (&promoted=0)
+const q = new URLSearchParams(location.search);
+const out = document.getElementById('out');
+
+if (q.get('demo') !== '1') {
+  out.textContent = 'ไม่พบเอกสาร';
+} else {
+  const roundNo = q.get('round') === '2' ? 2 : 1;
+  const school = {
+    school_name: 'โรงเรียนตัวอย่าง', affiliation: 'สำนักงานเขตพื้นที่การศึกษาประถมศึกษาตัวอย่าง',
+    order_issuer: 'สพป.ตัวอย่าง', director_prefix: 'นาย', director_name: 'ตัวอย่าง นามสมมติ',
+    director_title: 'ผู้อำนวยการโรงเรียนตัวอย่าง',
+  };
+  const round = roundNo === 1
+    ? { start_year: 2568, round_no: 1, order_no: '200/2569', order_date: '2026-04-29', notice_date: '2026-05-28' }
+    : { start_year: 2569, round_no: 2, order_no: '200/2569', order_date: '2026-04-29', notice_date: '2026-05-28' };
+  const promoted = q.get('promoted') !== '0';
+  const base = 30200, pct = roundNo === 1 ? 2.30 : 2.10, before = roundNo === 1 ? 26490 : 27190;
+  const inc = suggestIncrement(base, pct);
+  const notice = {
+    snap_full_name: 'นางสาวสมหญิง ใจดี', snap_position: 'ครู', snap_academic_rank: 'ครูชำนาญการ',
+    promoted, before_salary: before, base_amount: base, percent: pct, increment: inc,
+    special_comp: 0, new_salary: suggestNewSalary(before, inc),
+    reason: promoted ? null : 'ตัวอย่างเหตุผล (ข้อมูลสมมติ)',
+  };
+  out.append(renderNotice({ school, round, notice, signatureUrl: 'assets/sig_sample.png', draft: false }));
+}
+document.getElementById('printBtn').addEventListener('click', async () => {
+  await Promise.all([...document.images].map(i => i.decode().catch(() => {})));
+  await document.fonts.ready;
+  window.print();
+});
+</script>
+</body>
+</html>
