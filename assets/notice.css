@@ -3,12 +3,16 @@
 @font-face { font-family: 'Sarabun'; font-weight: 700; src: url('fonts/sarabun-thai-700-normal.woff2') format('woff2'); unicode-range: U+0E01-0E5B, U+200C-200D, U+25CC; }
 @font-face { font-family: 'Sarabun'; font-weight: 700; src: url('fonts/sarabun-latin-700-normal.woff2') format('woff2'); unicode-range: U+0000-00FF, U+2013, U+2014, U+2022; }
 
-@page { size: A4; margin: 18mm; }
+/* ขอบกระดาษ 0 แล้วเว้นขอบในตัวใบเอง: Chrome จึงไม่พิมพ์หัว/ท้ายกระดาษ (URL, วันที่) ลงบนเอกสารลับ */
+@page { size: A4; margin: 0; }
 
-body { margin: 0; background: #e8e8e8; font-family: 'Sarabun', 'TH Sarabun New', sans-serif; font-size: 13pt; line-height: 1.55; color: #111; }
-.sheet { position: relative; box-sizing: border-box; width: 210mm; height: 297mm; padding: 18mm; margin: 8mm auto; background: #fff; overflow: hidden; page-break-after: always; break-after: page; }
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; background: #e8e8e8; color: #111; font-family: 'Sarabun', 'TH Sarabun New', sans-serif; font-size: 13pt; line-height: 1.55; }
+
+.sheet { position: relative; width: 210mm; height: 297mm; padding: 18mm; margin: 0 auto 8mm; background: #fff; overflow: hidden; }
 .secret { color: #c0392b; text-align: center; font-weight: 700; font-size: 18pt; }
-.secret.foot { position: absolute; left: 18mm; right: 18mm; bottom: 14mm; }
+.secret.foot { position: absolute; left: 18mm; right: 18mm; bottom: 12mm; }
 h1 { text-align: center; font-size: 16pt; margin: 0 0 4mm; }
 p { margin: 0 0 3mm; }
 .dot { border-bottom: 1px dotted #333; padding: 0 3mm; }
@@ -17,17 +21,40 @@ p { margin: 0 0 3mm; }
 table { border-collapse: collapse; margin: 3mm auto 0; width: 94%; }
 td, th { border: 1px solid #333; text-align: center; padding: 2mm; font-weight: 400; }
 td { height: 20mm; }
-.reason-line { border-bottom: 1px dotted #333; min-height: 7mm; }
+.not-promoted { margin-top: 5mm; margin-bottom: 0; }
+/* เหตุผลเขียนบนเส้นประ 3 บรรทัด (ยาวกว่านั้นจะดันส่วนล่างลง ระบบเตือนถ้าล้นหน้า) */
+.reason { --lh: 1.55em; --dots: linear-gradient(to right, #444 50%, transparent 50%);
+  min-height: calc(3 * var(--lh)); line-height: var(--lh); padding-left: 6mm; overflow-wrap: anywhere;
+  background-image: var(--dots), var(--dots), var(--dots);
+  background-size: 3px 1px; background-repeat: repeat-x;
+  background-position: 0 calc(var(--lh) - 1px), 0 calc(2 * var(--lh) - 1px), 0 calc(3 * var(--lh) - 1px); }
 .sig { margin: 6mm 0 0 auto; width: 85mm; text-align: center; }
-.sig-img { height: 16mm; min-height: 16mm; }
-.sig-img img { height: 16mm; }
-.draft-mark { color: #999; font-size: 11pt; }
-.confidential-note { font-size: 10pt; color: #666; }
+.sig-img { height: 16mm; }
+.sig-img img { height: 16mm; max-width: 100%; object-fit: contain; }
+.remark { margin-top: 4mm; }
+.remark-indent { display: inline-block; padding-left: 16mm; }
+.watermark { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 1; }
+.watermark span { transform: rotate(-35deg); font-size: 54pt; font-weight: 700; color: rgba(192, 57, 43, .14); white-space: nowrap; }
+.corner-label { position: absolute; top: 7mm; right: 12mm; font-size: 9pt; color: #888; }
 
+/* แถบเครื่องมือ (ไม่พิมพ์) */
+.toolbar { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: center;
+  padding: 8px 16px; margin-bottom: 8mm; background: #fff; border-bottom: 1px solid #c5cad3; font-size: 15px; line-height: 1.5; }
+.toolbar button, .toolbar a { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid #c5cad3; background: #fff; color: #1d2330; text-decoration: none; cursor: pointer; }
+.toolbar button.primary { background: #1f5fae; border-color: #1f5fae; color: #fff; }
+.toolbar button:disabled { opacity: .6; cursor: wait; }
+.toolbar .note { color: #b42318; font-size: 13px; }
+.toolbar .status { flex-basis: 100%; text-align: center; font-size: 14px; color: #5d6675; }
+.toolbar .status.error { color: #b42318; }
+.not-found { text-align: center; padding: 20vh 16px; font-size: 20px; color: #555; }
+
+@media screen {
+  .sheet { box-shadow: 0 1px 6px rgba(0, 0, 0, .25); zoom: var(--sheet-zoom, 1); }
+}
 @media print {
   body { background: none; }
-  .sheet { margin: 0; box-shadow: none; padding: 0; width: auto; height: 261mm; }
-  .secret.foot { left: 0; right: 0; bottom: 0; }
+  /* สูงน้อยกว่า A4 เล็กน้อยกันปัดเศษแล้วเกิดหน้าว่าง */
+  .sheet { margin: 0; box-shadow: none; height: 296.5mm; }
+  .sheet:not(:last-child) { break-after: page; }
   .no-print { display: none !important; }
 }
-@media screen { .sheet { box-shadow: 0 1px 6px rgba(0,0,0,.25); } }
