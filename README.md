@@ -36,6 +36,7 @@ assets/config.js        URL ของ Supabase + publishable key (ค่าส�
 supabase/migrations/    โครงสร้างฐานข้อมูล สิทธิ์ RLS ฟังก์ชัน trigger storage (รันตามลำดับชื่อไฟล์)
 supabase/functions/     Edge Functions: admin-create-user, admin-reset-password
 supabase/seed/          สร้างบัญชีแอดมิน/ผอ. ครั้งแรก, ล้างข้อมูลทดสอบก่อนใช้งานจริง
+.github/workflows/      keep-alive กันโปรเจกต์ Supabase แผน Free ถูกพัก
 supabase/tests/         ชุดทดสอบสิทธิ์ (RLS) และทั้ง flow
 tests/                  ทดสอบสูตรคำนวณ และทดสอบหน้าเว็บ (จำลอง Supabase)
 docs/                   สเปกและไฟล์อ้างอิง (ข้อมูลสมมติ)
@@ -107,10 +108,19 @@ Supabase พักโปรเจกต์ Free ที่มีการใช�
 - กดเปิดคืนได้ที่ Dashboard → โปรเจกต์ → **Resume project** ข้อมูลไม่หาย แต่ **ต้องทำภายใน 90 วัน** หลังถูกพัก
 - เกิน 90 วันแล้วเปิดคืนจาก Dashboard ไม่ได้ ต้องดาวน์โหลด backup ไปกู้ในโปรเจกต์ใหม่ (URL และ key เปลี่ยน ต้องแก้ `assets/config.js`)
 
-ทางเลือก (เลือกอย่างใดอย่างหนึ่ง):
-1. อัปเกรดเป็นแผน Pro: ไม่ถูกพัก และมี backup รายวัน 7 วัน (มีค่าใช้จ่ายรายเดือน)
-2. ตั้งเตือนในปฏิทินให้แอดมินเข้า Dashboard กด Resume ทุก 2 เดือน และ dump ข้อมูลเก็บไว้เสมอ
-3. ตั้งงานอัตโนมัติเรียกระบบทุกวันเพื่อกันการพัก (ยังไม่ได้ทำ ต้องเพิ่มฟังก์ชันเล็ก ๆ และตัวตั้งเวลาเช่น GitHub Actions)
+**ระบบนี้กันไว้แล้วด้วย GitHub Actions** ([`.github/workflows/supabase-keep-alive.yml`](.github/workflows/supabase-keep-alive.yml)):
+
+- เรียกฟังก์ชัน `public.keep_alive()` วันละ 2 รอบ (08:17 และ 20:17 เวลาไทย) รอบละ 3 ครั้ง
+  ด้วย publishable key จาก `assets/config.js` ฟังก์ชันนี้คืนแค่เวลาของเซิร์ฟเวอร์ ไม่อ่าน/เขียนข้อมูลใด
+- repo นี้เป็นสาธารณะ GitHub จะปิด workflow ตั้งเวลาเองถ้า repo ไม่มีความเคลื่อนไหว 60 วัน
+  workflow จึง commit ไฟล์ `.github/keep-alive-heartbeat` เองเมื่อไม่มี commit เกิน 45 วัน (ปีละไม่กี่ครั้ง)
+- ดูสถานะได้ที่แท็บ **Actions** ของ repo (กด "Run workflow" เพื่อทดสอบเองได้) ถ้ารอบไหนล้มเหลว GitHub จะส่งอีเมลแจ้ง
+- workflow ตั้งเวลารันจาก default branch เท่านั้น ถ้าเปลี่ยน default branch ต้องมีไฟล์ workflow ใน branch นั้นด้วย
+- ถ้าย้ายไปโปรเจกต์ใหม่ แก้แค่ `assets/config.js` (workflow อ่าน URL/key จากไฟล์นี้) และรัน migration ให้มี `keep_alive()`
+
+ถ้ายังได้อีเมลเตือนจาก Supabase ว่าจะพักโปรเจกต์ แปลว่า keep-alive ไม่ทำงาน: ตรวจแท็บ Actions
+และถ้าถูกพักไปแล้วให้กด **Resume project** ใน Dashboard ภายใน 90 วัน
+ถ้าภายหลังอัปเกรดเป็นแผน Pro (ไม่ถูกพัก) ปิด workflow นี้ได้ที่ Actions → Supabase keep-alive → Disable workflow
 
 อ้างอิง: [Project Pausing](https://supabase.com/docs/guides/platform/free-project-pausing), [Database Backups](https://supabase.com/docs/guides/platform/backups)
 
@@ -118,7 +128,7 @@ Supabase พักโปรเจกต์ Free ที่มีการใช�
 
 | ชุดทดสอบ | ตรวจอะไร | วิธีรัน |
 |---|---|---|
-| `supabase/tests/rls_test.sql` | สิทธิ์ทุกบทบาท 92 ข้อ (ครูเห็นแค่ของตัวเอง, แก้รอบที่เผยแพร่ไม่ได้ ฯลฯ) | วางใน SQL editor แล้วรัน |
+| `supabase/tests/rls_test.sql` | สิทธิ์ทุกบทบาท 93 ข้อ (ครูเห็นแค่ของตัวเอง, แก้รอบที่เผยแพร่ไม่ได้ ฯลฯ) | วางใน SQL editor แล้วรัน |
 | `supabase/tests/e2e_flow.sql` | ทั้ง flow ครู 12 คน 2 รอบ + ตรวจ audit log 32 ข้อ | วางใน SQL editor แล้วรัน |
 | `supabase/tests/run_local.sh` | สร้างฐานข้อมูลใหม่จาก migration แล้วรัน 2 ชุดบน (ไม่แตะของจริง) | `PGHOST=… PGPORT=… PGUSER=postgres ./supabase/tests/run_local.sh` |
 | `tests/calc.test.mjs` | สูตรเสนอค่าเทียบการคำนวณแม่นยำ 1,000,000 ค่า | `node tests/calc.test.mjs` |
@@ -136,7 +146,7 @@ Supabase พักโปรเจกต์ Free ที่มีการใช�
 - [ ] (ถ้าต้องการ) เปลี่ยนฟอนต์เป็น TH Sarabun New: ใส่ไฟล์ใน `assets/fonts/` แล้วแก้ `@font-face` ใน `assets/notice.css`
 - [ ] ตั้งค่า Dashboard ครบ (ปิดสมัครเอง, รหัสขั้นต่ำ 8, Site URL)
 - [ ] แอดมินและ ผอ. เปลี่ยนรหัสชั่วคราวแล้ว
-- [ ] เลือกวิธีกันโปรเจกต์ถูกพัก และทดลอง dump ข้อมูล 1 ครั้ง
+- [ ] ตรวจว่า workflow "Supabase keep-alive" ในแท็บ Actions ทำงาน (เครื่องหมายถูกสีเขียว) และทดลอง dump ข้อมูล 1 ครั้ง
 - [ ] สำรองข้อมูล แล้วล้างข้อมูลทดสอบด้วย `supabase/seed/reset_test_data.sql`
   (ลบรอบ ใบแจ้ง ครู บัญชีครู และ audit log ทั้งหมด เก็บบัญชีแอดมิน/ผอ. ข้อมูลโรงเรียน และลายเซ็นไว้; ต้องแก้คำยืนยันในไฟล์ก่อนรัน)
 

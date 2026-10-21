@@ -1,0 +1,66 @@
+# กันโปรเจกต์ Supabase แผน Free ถูกพักเพราะไม่มีการใช้งาน (พักเมื่อใช้งานน้อยในรอบ 7 วัน)
+# เรียกฟังก์ชัน public.keep_alive() วันละ 2 รอบ รอบละ 3 ครั้ง ด้วย publishable key จาก assets/config.js
+# และกัน GitHub ปิด workflow ตั้งเวลาเองใน repo สาธารณะที่ไม่มีความเคลื่อนไหว 60 วัน
+# ด้วย commit เล็ก ๆ (ไฟล์ .github/keep-alive-heartbeat) เมื่อไม่มี commit เกิน 45 วัน
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: '17 1 * * *'    # 08:17 เวลาไทย
+    - cron: '17 13 * * *'   # 20:17 เวลาไทย
+  workflow_dispatch:
+    inputs:
+      force_heartbeat:
+        description: 'สร้าง heartbeat commit ทันที (ใช้ทดสอบ)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # ใช้เฉพาะ heartbeat commit
+
+concurrency:
+  group: supabase-keep-alive
+  cancel-in-progress: false
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: เรียกฐานข้อมูล Supabase
+        run: |
+          url=$(sed -n "s/^export const SUPABASE_URL = '\(.*\)';$/\1/p" assets/config.js)
+          key=$(sed -n "s/^export const SUPABASE_KEY = '\(.*\)';$/\1/p" assets/config.js)
+          if [ -z "$url" ] || [ -z "$key" ]; then
+            echo "::error::อ่าน SUPABASE_URL/SUPABASE_KEY จาก assets/config.js ไม่ได้"
+            exit 1
+          fi
+          for i in 1 2 3; do
+            curl --fail-with-body --silent --show-error --max-time 30 \
+              --retry 3 --retry-delay 20 --retry-all-errors \
+              -X POST "$url/rest/v1/rpc/keep_alive" \
+              -H "apikey: $key" -H "Content-Type: application/json" -d '{}'
+            echo " (ครั้งที่ $i)"
+            sleep 5
+          done
+
+      - name: กัน GitHub ปิด workflow ตั้งเวลา
+        if: always()
+        env:
+          FORCE: ${{ inputs.force_heartbeat }}
+        run: |
+          age=$(( ( $(date +%s) - $(git log -1 --format=%ct) ) / 86400 ))
+          echo "commit ล่าสุดเมื่อ ${age} วันก่อน"
+          if [ "$age" -lt 45 ] && [ "$FORCE" != "true" ]; then
+            exit 0
+          fi
+          date -u +%Y-%m-%dT%H:%M:%SZ > .github/keep-alive-heartbeat
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/keep-alive-heartbeat
+          git commit -m 'chore: keep-alive heartbeat (กัน GitHub ปิด workflow ตั้งเวลา)'
+          git push origin "HEAD:${GITHUB_REF_NAME}"

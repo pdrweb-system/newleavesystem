@@ -323,6 +323,7 @@ begin
   perform _t.expect_err('13.4 anon เรียก log_download ไม่ได้', '42501',
     format($q$ select public.log_download(%L) $q$, r1));
   perform _t.expect_count('13.5 anon อ่านไฟล์ใน storage ไม่ได้', 0, 'select 1 from storage.objects');
+  perform _t.expect_ok('13.6 anon เรียก keep_alive ได้ (กันโปรเจกต์ถูกพัก ไม่คืนข้อมูลใด)', 'select public.keep_alive()');
 
   reset role;
   perform _t.as_user(u_none);
